@@ -613,14 +613,31 @@
   renderAyudas();
   loadTpl("solo");
   pintarCabecera();
+  // Enlaces del correo (confirmar cuenta o nueva contraseña): en la web llegan en la dirección;
+  // en la app, por compensa://auth#… (la página /abrir/ hace de puente)
+  function tratarEnlace(enlace){
+    if(!enlace) return Promise.resolve();
+    if(enlace.error){ toast("El enlace no es válido o ha caducado. Pide otro."); return Promise.resolve(); }
+    return N.completarUsuario().then(function(){
+      if(enlace.tipo==="recovery") abrirCuenta("nueva","Escribe tu nueva contraseña.","");
+      else toast("¡Correo confirmado! Ya has entrado en tu cuenta.");
+      return cargarPerfil();
+    });
+  }
+  function enlaceDeUrl(u){
+    u=String(u||""); if(u.indexOf("compensa://")!==0) return null;
+    var i=u.indexOf("#"); return i>=0 ? N.sesionDesdeEnlace(u.slice(i)) : null;
+  }
   if(N&&N.configurado()){
     var enlace=N.sesionDesdeEnlace();
-    if(enlace&&enlace.error) toast("El enlace no es válido o ha caducado. Pide otro.");
-    N.completarUsuario().then(function(){
-      if(enlace&&enlace.tipo==="recovery") abrirCuenta("nueva","Escribe tu nueva contraseña.","");
-      else if(enlace&&enlace.tipo) toast("¡Correo confirmado! Ya has entrado en tu cuenta.");
-      return cargarPerfil();
-    }).catch(function(){});
+    (enlace ? tratarEnlace(enlace) : N.completarUsuario().then(cargarPerfil)).catch(function(){});
     cargarAyudas();
+    if(N.enApp()){
+      try{
+        var AppNativa=window.Capacitor.registerPlugin("App");
+        AppNativa.addListener("appUrlOpen",function(d){ tratarEnlace(enlaceDeUrl(d&&d.url)).catch(function(){}); });
+        Promise.resolve(AppNativa.getLaunchUrl()).then(function(r){ var e=enlaceDeUrl(r&&r.url); if(e) return tratarEnlace(e); }).catch(function(){});
+      }catch(_){}
+    }
   }
 })();

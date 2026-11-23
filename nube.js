@@ -38,6 +38,10 @@ window.Nube = (() => {
     return m;
   }
 
+  const enApp = () => { try { return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); } catch (e) { return false; } };
+  const web = () => (C.webUrl || location.origin).replace(/\/+$/, "");
+  const volver = tipo => enApp() ? web() + "/abrir/?r=" + tipo : web() + "/?" + tipo + "=1";
+
   // ---------- Sesión ----------
   async function token() {
     const s = leer();
@@ -63,7 +67,7 @@ window.Nube = (() => {
   }
   // Devuelve {sesion:true} si entra directamente o {confirmar:true} si hay que confirmar el correo
   async function registrar(email, password) {
-    const ir = encodeURIComponent((C.webUrl || location.origin).replace(/\/+$/, "") + "/?confirmado=1");
+    const ir = encodeURIComponent(volver("confirmado"));
     const r = await pedir("/auth/v1/signup?redirect_to=" + ir, {
       method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ email, password })
@@ -74,7 +78,7 @@ window.Nube = (() => {
     return { confirmar: true };
   }
   async function recuperar(email) {
-    const ir = encodeURIComponent((C.webUrl || location.origin).replace(/\/+$/, "") + "/?nueva=1");
+    const ir = encodeURIComponent(volver("nueva"));
     const r = await pedir("/auth/v1/recover?redirect_to=" + ir, {
       method: "POST", headers: { apikey: KEY, "Content-Type": "application/json" },
       body: JSON.stringify({ email })
@@ -91,13 +95,14 @@ window.Nube = (() => {
     if (!r.ok) throw error(await json(r), r);
   }
   // Enlaces del correo (confirmación o nueva contraseña): la sesión llega en el # de la dirección
-  function sesionDesdeEnlace() {
-    const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+  function sesionDesdeEnlace(fragmento) {
+    const desdeUrl = typeof fragmento === "string";
+    const h = new URLSearchParams(String(desdeUrl ? fragmento : location.hash).replace(/^#/, ""));
     if (h.get("error_description")) return { error: h.get("error_description").replace(/\+/g, " ") };
     if (!h.get("access_token")) return null;
     guardar({ access_token: h.get("access_token"), refresh_token: h.get("refresh_token"),
       expires_in: Number(h.get("expires_in")) || 3600, user: {} });
-    history.replaceState(null, "", location.pathname + location.search);
+    if (!desdeUrl) history.replaceState(null, "", location.pathname + location.search);
     return { tipo: h.get("type") || "" };
   }
   async function completarUsuario() {
@@ -172,6 +177,6 @@ window.Nube = (() => {
     return j;
   }
 
-  return { configurado, usuario, entrar, registrar, recuperar, cambiarClave, sesionDesdeEnlace, completarUsuario, salir,
+  return { configurado, enApp, usuario, entrar, registrar, recuperar, cambiarClave, sesionDesdeEnlace, completarUsuario, salir,
     perfil, guardarComunidad, marcarAyudasVistas, borrarCuenta, ayudas, decisiones, guardarDecision, borrarDecision, funcion };
 })();
