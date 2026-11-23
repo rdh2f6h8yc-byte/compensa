@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const destino = path.join(raiz, "www");
-const saltar = new Set(["node_modules", "www", ".git", "android", "ios", "scripts", "supabase", "resources", "codemagic.yaml", "vercel.json", "README.md"]);
+const saltar = new Set(["node_modules", "www", ".git", "android", "ios", "scripts", "supabase", "resources", "appstore", "codemagic.yaml", "vercel.json", "README.md"]);
 
 function copiar(desde, hacia) {
   for (const nombre of fs.readdirSync(desde)) {

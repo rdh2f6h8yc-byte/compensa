@@ -166,3 +166,4 @@ svg{display:block;width:100%;height:auto}
 .sheet{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
 .sheet{max-height:calc(100vh - env(safe-area-inset-top) - 12px)}
 .toast{bottom:calc(90px + env(safe-area-inset-bottom))}
+.toast{pointer-events:none}
