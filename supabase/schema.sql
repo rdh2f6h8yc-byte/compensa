@@ -198,3 +198,9 @@ grant execute on function public.guardar_comunidad(text) to authenticated;
 grant execute on function public.marcar_ayudas_vistas() to authenticated;
 grant execute on function public.usar_ia(int) to authenticated;
 grant execute on function public.borrar_mi_cuenta() to authenticated;
+
+-- Ajuste de permisos (es_pro solo se usa por dentro; puede_guardar lo necesitan las reglas de decisiones)
+revoke all on function public.es_pro(uuid) from public, anon, authenticated;
+revoke all on function public.puede_guardar() from public, anon;
+grant execute on function public.puede_guardar() to authenticated;
+revoke all on function public.crear_perfil() from public, anon, authenticated;

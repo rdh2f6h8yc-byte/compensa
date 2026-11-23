@@ -14,7 +14,7 @@ Simulador para jóvenes que quieren independizarse: compara irte de casa, compar
 - `privacidad/`, `terminos/`, `soporte/`: páginas que pide la App Store
 
 ## Pasos pendientes (una sola vez)
-1. Supabase → SQL Editor: ejecutar `supabase/schema.sql` (si no está aplicado).
+1. Base de datos: ya creada (tablas, reglas y funciones `explicar` y `apple` subidas).
 2. Supabase → Authentication → URL Configuration: Site URL `https://compensa-gray.vercel.app` y añadir `https://compensa-gray.vercel.app/**` en Redirect URLs.
 3. Supabase → Edge Functions → Secrets: `ANTHROPIC_API_KEY`, `APPLE_IAP_KEY`, `APPLE_IAP_KEY_ID`, `APPLE_IAP_ISSUER_ID` (los mismos valores que en Borna).
 4. Apple Developer → Identifiers: `group.almara.compensa`.
