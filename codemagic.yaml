@@ -1,0 +1,47 @@
+# Compensa · compilación de la app de iPhone en Codemagic (Mac en la nube) y subida a TestFlight.
+# No hace falta un Mac: Codemagic coge este repositorio, empaqueta la web con Capacitor,
+# firma la app con tu cuenta de Apple y la sube a App Store Connect.
+#
+# Antes de la primera compilación (una sola vez):
+#   1. Apple Developer → Identifiers: crea el identificador group.almara.compensa (sin capacidades extra).
+#   2. App Store Connect → Mis apps → «+»: crea la app Compensa con ese identificador.
+#   3. Codemagic → Add application → elige el repositorio compensa (GitHub) → «codemagic.yaml».
+#   4. La clave de App Store Connect («Borna») y el certificado de distribución ya los tienes de Borna: se reutilizan.
+#   5. Lanza el workflow «Compensa iOS → TestFlight».
+
+workflows:
+  ios-testflight:
+    name: Compensa iOS → TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    integrations:
+      app_store_connect: Borna
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: group.almara.compensa
+      node: 20
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Instalar dependencias
+        script: npm install
+      - name: Copiar la web y preparar el proyecto de iPhone
+        script: |
+          node scripts/copiar-www.mjs
+          npx cap sync ios
+      - name: Preparar la firma
+        script: xcode-project use-profiles
+      - name: Número de compilación
+        script: |
+          cd ios/App
+          agvtool new-version -all "$BUILD_NUMBER"
+      - name: Compilar la app
+        script: xcode-project build-ipa --workspace ios/App/App.xcworkspace --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

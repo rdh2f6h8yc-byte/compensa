@@ -1,0 +1,21 @@
+{
+  "name": "compensa",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Compensa: ¿puedo independizarme? Simulador para jóvenes",
+  "scripts": {
+    "www": "node scripts/copiar-www.mjs",
+    "cap:sync": "node scripts/copiar-www.mjs && cap sync ios",
+    "ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/app": "^7.1.0",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/ios": "^7.4.3",
+    "@capacitor/splash-screen": "^7.0.3",
+    "@capacitor/status-bar": "^7.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "appId": "group.almara.compensa",
+  "appName": "Compensa",
+  "webDir": "www",
+  "backgroundColor": "#0f3d2e",
+  "server": {
+    "iosScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "backgroundColor": "#0f3d2e",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "LIGHT",
+      "backgroundColor": "#f5f3ee"
+    }
+  }
+}
