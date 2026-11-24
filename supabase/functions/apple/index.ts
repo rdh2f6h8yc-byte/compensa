@@ -109,6 +109,19 @@ async function registrar(usuario: string | null, e: Estado) {
   return await r.json();
 }
 
+// ¿Sigue existiendo la cuenta a la que se asoció la compra? Si se borró, la suscripción queda libre
+async function cuentaExiste(id: string) {
+  if (!esUuid(id)) return true;
+  const k = claveSupabase();
+  const cab: Record<string, string> = { apikey: k };
+  if (!k.startsWith("sb_")) cab.Authorization = "Bearer " + k;
+  try {
+    const r = await fetch((Deno.env.get("SUPABASE_URL") || "") + "/auth/v1/admin/users/" + id, { headers: cab });
+    await r.body?.cancel();
+    return r.status !== 404;
+  } catch (_e) { return true; }
+}
+
 // La app, después de comprar o al restaurar: comprueba la sesión y activa Pro en esa cuenta
 async function verificar(req: Request) {
   const auth = req.headers.get("authorization") || "";
@@ -130,7 +143,7 @@ async function verificar(req: Request) {
     const e = await estadoEnApple(id);
     if (!e) continue;
     // Una suscripción de Apple sirve para una sola cuenta: la que se puso al comprar
-    if (e.cuenta && e.cuenta !== yo) { ajena = true; continue; }
+    if (e.cuenta && e.cuenta !== yo && await cuentaExiste(e.cuenta)) { ajena = true; continue; }
     await registrar(yo, e);
     if (!ultimo || e.estado === "active") ultimo = e;
   }
