@@ -523,7 +523,18 @@
     btn.disabled=true; m.className="msg"; m.textContent="Abriendo App Store…";
     try{
       var r=await Compra.comprar({id:sel.getAttribute("data-plan"), cuenta:N.usuario().id});
-      if(r.estado==="ok"){ m.textContent="Activando tu suscripción…"; await confirmarApple([r.transactionId]); toast("¡Compensa Pro activado!"); $("paywall").classList.remove("show"); return; }
+      if(r.estado==="ok"){
+        m.textContent="Activando tu suscripción…";
+        var ok=false, ultimo=null;
+        for(var i=0;i<3&&!ok;i++){
+          try{ await confirmarApple([r.transactionId]); ok=true; }
+          catch(err){ ultimo=err; if(err&&err.codigo==="ajena") break; await new Promise(function(res){setTimeout(res,2000);}); }
+        }
+        if(ok){ toast("¡Compensa Pro activado!"); $("paywall").classList.remove("show"); return; }
+        m.className="msg err";
+        m.textContent=(ultimo&&ultimo.codigo==="ajena")?ultimo.message:"Tu compra está hecha, pero no hemos podido activarla todavía. Pulsa «Restaurar compras» en unos segundos.";
+        return;
+      }
       m.textContent = r.estado==="pendiente" ? "La compra está pendiente de aprobación. Se activará sola cuando Apple la confirme." : "";
     }catch(e){ m.className="msg err"; m.textContent=e.message||"No se ha podido completar la compra."; }
     finally{ if($("payComprar")) $("payComprar").disabled=false; }

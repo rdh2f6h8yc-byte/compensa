@@ -71,13 +71,20 @@ public class CompraApplePlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject("Faltan datos para la compra")
             return
         }
-        Task {
+        Task { @MainActor in
             do {
                 guard let p = try await Product.products(for: [id]).first else {
                     call.reject("Esta suscripción no está disponible en App Store")
                     return
                 }
-                let r = try await p.purchase(options: [.appAccountToken(cuenta)])
+                let opciones: Set<Product.PurchaseOption> = [.appAccountToken(cuenta)]
+                let r: Product.PurchaseResult
+                // En iPad (y con varias ventanas) Apple necesita saber en qué pantalla mostrar la hoja de pago
+                if #available(iOS 17.0, *), let escena = self.bridge?.viewController?.view.window?.windowScene {
+                    r = try await p.purchase(confirmIn: escena, options: opciones)
+                } else {
+                    r = try await p.purchase(options: opciones)
+                }
                 switch r {
                 case .success(let v):
                     switch v {
@@ -95,9 +102,30 @@ public class CompraApplePlugin: CAPPlugin, CAPBridgedPlugin {
                     call.resolve(["estado": "desconocido"])
                 }
             } catch {
-                call.reject("No se ha podido completar la compra: \(error.localizedDescription)")
+                // Si Apple da error pero la suscripción ya está activa en este Apple ID, se usa esa
+                if let t = await self.activa(id) {
+                    call.resolve(["estado": "ok", "transactionId": String(t.originalID), "id": t.productID])
+                    return
+                }
+                if let e = error as? StoreKitError, case .userCancelled = e {
+                    call.resolve(["estado": "cancelada"])
+                    return
+                }
+                call.reject("No se ha podido completar la compra. Inténtalo de nuevo en unos segundos. (\(error.localizedDescription))")
             }
         }
+    }
+
+    /// Suscripción de Compensa activa ahora mismo en este Apple ID (cualquiera de los dos planes)
+    private func activa(_ preferida: String) async -> Transaction? {
+        var otra: Transaction?
+        for await r in Transaction.currentEntitlements {
+            guard case .verified(let t) = r, t.productType == .autoRenewable, t.revocationDate == nil else { continue }
+            if let fin = t.expirationDate, fin < Date() { continue }
+            if t.productID == preferida { return t }
+            otra = otra ?? t
+        }
+        return otra
     }
 
     @objc func restaurar(_ call: CAPPluginCall) {
