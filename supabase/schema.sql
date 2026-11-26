@@ -159,18 +159,26 @@ create table if not exists public.compras_apple (
 alter table public.compras_apple enable row level security;
 -- Sin políticas: solo el servidor (función «apple») la usa.
 
-create or replace function public.registrar_apple(p_usuario uuid, p_original text, p_producto text,
-  p_hasta timestamptz, p_estado text, p_entorno text) returns json
-language plpgsql security definer set search_path = public as $$
-declare u uuid;
+create or replace function public.registrar_apple(p_usuario uuid, p_original text, p_producto text, p_hasta timestamptz, p_estado text, p_entorno text)
+returns json language plpgsql security definer set search_path = public as $$
+declare u uuid; antes uuid;
 begin
-  select usuario into u from public.compras_apple where original = p_original;
-  u := coalesce(u, p_usuario);
+  -- La suscripción es de la cuenta que indica Apple (la que estaba abierta al comprar).
+  -- Si Apple no indica cuenta, se queda la que ya tenía.
+  select usuario into antes from public.compras_apple where original = p_original;
+  u := coalesce(p_usuario, antes);
   insert into public.compras_apple (original, usuario, producto, estado, hasta, entorno, actualizado)
   values (p_original, u, coalesce(p_producto, ''), coalesce(p_estado, ''), p_hasta, coalesce(p_entorno, ''), now())
-  on conflict (original) do update set usuario = coalesce(public.compras_apple.usuario, excluded.usuario),
+  on conflict (original) do update set usuario = excluded.usuario,
     producto = excluded.producto, estado = excluded.estado, hasta = excluded.hasta,
     entorno = excluded.entorno, actualizado = now();
+  -- Si la suscripción cambia de cuenta, la anterior deja de ser Pro (salvo que tenga otra suscripción activa)
+  if antes is not null and u is distinct from antes then
+    update public.perfiles set pro_hasta = (
+      select max(hasta) from public.compras_apple
+      where usuario = antes and estado = 'active' and original <> p_original)
+    where id = antes;
+  end if;
   if u is not null and p_estado in ('active', 'expired', 'revoked') then
     update public.perfiles set pro_hasta = p_hasta where id = u;
   end if;
